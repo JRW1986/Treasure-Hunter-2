@@ -2,7 +2,7 @@ from settings import *
 from sprites import Sprite , AnimatedSprite, MovingSprite , Spike
 from player import Player
 from groups import AllSprites
-from enemies import Tooth
+from enemies import Tooth, Shell, Pearl
 
 from random import uniform
 
@@ -16,8 +16,12 @@ class Level:
         self.semi_collision_sprites = pygame.sprite.Group()
         self.damege_sprites = pygame.sprite.Group()
         self.tooth_sprites = pygame.sprite.Group()
+        self.pearl_sprites = pygame.sprite.Group()
 
         self.setup(tmx_map, level_frames)
+
+        # frames
+        self.pearl_surf = level_frames['pearl']
 
     def setup(self, tmx_map, level_frames):
        # tiles
@@ -124,6 +128,18 @@ class Level:
        for obj in tmx_map.get_layer_by_name('Enemies'):
            if obj.name == 'tooth':
               Tooth((obj.x, obj.y), level_frames['tooth'], (self.all_sprites, self.damege_sprites, self.tooth_sprites), self.collision_sprites)
+           if obj.name == 'shell':
+              Shell(
+                  pos = (obj.x, obj.y),
+                  frames = level_frames['shell'],
+                  groups = (self.all_sprites, self.collision_sprites),
+                  reverse = obj.properties['reverse'],
+                  player = self.player,
+                  create_pearl = self.create_pearl
+                  )
+
+    def create_pearl(self, pos, direction):
+        Pearl(pos, (self.all_sprites, self.damege_sprites, self.pearl_sprites), self.pearl_surf, direction, 150)
 
     def run(self, dt):
         self.all_sprites.update(dt)

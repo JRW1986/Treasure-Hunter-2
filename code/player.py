@@ -161,8 +161,8 @@ class Player(pygame.sprite.Sprite):
 
     def animate(self, dt):
         self.frame_index += ANIMATION_SPEED * dt
-        if self.state == 'attack' and self.frame_index >= len(self.frames[self.status]):
-            self.state = 'idle'
+        if self.status == 'attack' and self.frame_index >= len(self.frames[self.status]):
+            self.status = 'idle'
         self.image = self.frames[self.status][int(self.frame_index % len(self.frames[self.status]))]
         self.image = self.image if self.facing_right else pygame.transform.flip(self.image, True, False)
 
@@ -172,17 +172,17 @@ class Player(pygame.sprite.Sprite):
     def get_state(self):
         if self.on_surface['floor']:
             if self.attacking:
-                self.state = 'attack'
+                self.status = 'attack'
             else:
-                self.state = 'idle' if self.direction.x == 0 else 'run'
+                self.status = 'idle' if self.direction.x == 0 else 'run'
         else:
              if self.attacking:
-                 self.state = 'air_attack'
+                 self.status = 'air_attack'
              else:
                  if any((self.on_surface['left'], self.on_surface['right'])):
-                    self.state = 'wall'
+                    self.status = 'wall'
                  else:
-                    self.state = 'jump' if self.direction.y < 0 else 'fall'
+                    self.status = 'jump' if self.direction.y < 0 else 'fall'
 
     def update(self, dt):
         self.old_rect = self.hitbox_rect.copy()
