@@ -1,4 +1,24 @@
 class Data:
-    def __init__(self):
-        self.coins = 0
-        self.health = 5
+    def __init__(self, ui):
+        self._coins = 0
+        self._health = 5
+        self.ui = ui
+        self.ui.create_hearts(self._health)
+
+    @property
+    def health(self):
+        return self._health
+    
+    @health.setter
+    def health(self, value):
+        self._health = value
+        self.ui.create_hearts(value)
+
+    @property
+    def coins(self):
+        return self._coins
+
+    @coins.setter
+    def coins(self, value):
+        self._coins = value
+        self.ui.show_coin(value)
