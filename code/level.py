@@ -11,8 +11,19 @@ class Level:
         self.display_surface = pygame.display.get_surface()
         self.data = data
 
+        # level data
+        self.level_width = tmx_map.width * TILE_SIZE
+        self.level_bottom = tmx_map.height * TILE_SIZE
+        tmx_level_properties = tmx_map.get_layer_by_name('Data')[0].properties
+        bg_name = tmx_level_properties.get('bg')
+        bg_tile = level_frames['bg_tiles'].get(bg_name) or level_frames['bg_tiles'].get('Blue')
+
         # groups
-        self.all_sprites = AllSprites()
+        self.all_sprites = AllSprites(
+            width = tmx_map.width,
+            height = tmx_map.height,
+            bg_tile = bg_tile)
+        
         self.collision_sprites = pygame.sprite.Group()
         self.semi_collision_sprites = pygame.sprite.Group()
         self.damege_sprites = pygame.sprite.Group()
@@ -80,7 +91,9 @@ class Level:
                    animation_speed = ANIMATION_SPEED if not 'palm' in obj.name else ANIMATION_SPEED + uniform(-1, 1)
                       
                    AnimatedSprite((obj.x, obj.y), frames, groups, z)
-       
+           if obj.name == 'flag':
+               self.level_finish_rect = pygame.FRect((obj.x, obj.y,), (obj.width, obj.height))
+
        # moving objects
        for obj in tmx_map.get_layer_by_name('Moving Objects'):
            if obj.name == 'spike':
@@ -189,7 +202,22 @@ class Level:
                             self.player.rect.centerx > target.rect.centerx and not self.player.facing_right
             if target.rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
                 target.reverse()
-                
+
+    def check_constraint(self):
+        # left right constraint
+        if self.player.hitbox_rect.left < 0:
+            self.player.hitbox_rect.left = 0
+        if self.player.hitbox_rect.right > self.level_width:
+            self.player.hitbox_rect.right = self.level_width
+
+        # bottom constraint
+        if self.player.hitbox_rect.bottom > self.level_bottom:
+            pass
+
+        # success condition
+        if self.player.hitbox_rect.colliderect(self.level_finish_rect):
+            print('level complete')
+            
     def run(self, dt):
         self.display_surface.fill('black')
         
@@ -198,5 +226,6 @@ class Level:
         self.hit_collision()
         self.item_collisions()
         self.attack_collisions()
+        self.check_constraint()
 
         self.all_sprites.draw(self.player.hitbox_rect.center)
