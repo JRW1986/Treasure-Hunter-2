@@ -5,6 +5,9 @@ class Data:
         self.ui = ui
         self.ui.create_hearts(self._health)
 
+        self.unlocked_level = 0
+        self.current_level = 0
+
     @property
     def health(self):
         return self._health
