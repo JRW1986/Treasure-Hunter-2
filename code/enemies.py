@@ -91,10 +91,6 @@ class Shell(pygame.sprite.Sprite):
             self.frame_index = 0
             self.shoot_timer.activate()
 
-    def timer(self):
-        if not self.hit_timer.active:
-            self.hit_timer.activate()
-    
     def flickering(self):
         if self.hit_timer.active and sin(pygame.time.get_ticks()) > 0:
             white_mask = pygame.mask.from_surface(self.image)
@@ -105,7 +101,7 @@ class Shell(pygame.sprite.Sprite):
     def update(self, dt):
         self.shoot_timer.update()
         self.state_manager()
-        self.timer()
+        self.hit_timer.update()
         self.flickering()
 
         # animation

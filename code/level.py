@@ -205,10 +205,20 @@ class Level:
         self.pearl_sound.play()
 
     def pearl_collisions(self):
+        shell_hits = pygame.sprite.groupcollide(self.shell_sprites, self.pearl_sprites, False, True)
+        for shell, pearls in shell_hits.items():
+            shell.health -= 25 * len(pearls)
+            shell.hit_timer.activate()
+            if shell.health <= 0:
+                shell.kill()
+
         for sprite in self.collision_sprites:
-            sprite = pygame.sprite.spritecollide(sprite, self.pearl_sprites, True)
-            if sprite:
-                ParticleEffectSprite((sprite[0].rect.center), self.particle_frames, self.all_sprites)
+            if sprite in self.shell_sprites:
+                continue
+
+            hit_pearls = pygame.sprite.spritecollide(sprite, self.pearl_sprites, True)
+            for pearl in hit_pearls:
+                ParticleEffectSprite((pearl.rect.center), self.particle_frames, self.all_sprites)
 
     def hit_collision(self):
         for sprite in self.damege_sprites:
@@ -257,14 +267,6 @@ class Level:
         if self.player.hitbox_rect.colliderect(self.level_finish_rect):
             self.switch_stage('overworld', self.level_unlock)
 
-        # pearl hit shell
-        for pearl in self.pearl_sprites:
-            for shell in self.shell_sprites:
-                if pearl.rect.colliderect(shell.rect):
-                    shell.health -= 25
-                    if shell.health <= 0:
-                        shell.kill() 
-            
     def run(self, dt):
         self.display_surface.fill('black')
         
