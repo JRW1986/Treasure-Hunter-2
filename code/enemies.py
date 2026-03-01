@@ -2,6 +2,7 @@ from settings import *
 from random import choice, randint
 from timer import Timer
 from player import Player
+from math import sin
 
 class Tooth(pygame.sprite.Sprite):
     def __init__(self, pos, frames, groups, collision_sprites):
@@ -17,10 +18,19 @@ class Tooth(pygame.sprite.Sprite):
 
         self.hit_timer = Timer(250)
 
+        self.health = 100
+
     def reverse(self):
         if not self.hit_timer.active:
             self.direction *= -1
             self.hit_timer.activate()
+    
+    def flickering(self):
+        if self.hit_timer.active and sin(pygame.time.get_ticks()) > 0:
+            white_mask = pygame.mask.from_surface(self.image)
+            white_surf = white_mask.to_surface()
+            white_surf.set_colorkey('black')
+            self.image = white_surf
 
     def update(self, dt):
         self.hit_timer.update()
@@ -29,8 +39,8 @@ class Tooth(pygame.sprite.Sprite):
         self.frame_index += ANIMATION_SPEED * dt
         self.image = self.frames[int(self.frame_index) % len(self.frames)]
         self.image = pygame.transform.flip(self.image, True, False) if self.direction < 0 else self.image
-            
-
+        self.flickering()
+        
         # move
         self.rect.x += self.direction * self.speed * dt
 
@@ -57,6 +67,7 @@ class Shell(pygame.sprite.Sprite):
             self.frames = frames
             self.bullet_direction = 1
 
+        self.hit_timer = Timer(250)
         self.frame_index = 0
         self.state = 'idle'
         self.image = self.frames[self.state][self.frame_index]
@@ -67,6 +78,7 @@ class Shell(pygame.sprite.Sprite):
         self.shoot_timer = Timer(3000)
         self.has_fired = False
         self.create_pearl = create_pearl
+        self.health = 100
 
     def state_manager(self):
         player_pos, shell_pos = vector(self.player.hitbox_rect.center), vector(self.rect.center)
@@ -79,10 +91,22 @@ class Shell(pygame.sprite.Sprite):
             self.frame_index = 0
             self.shoot_timer.activate()
 
+    def timer(self):
+        if not self.hit_timer.active:
+            self.hit_timer.activate()
+    
+    def flickering(self):
+        if self.hit_timer.active and sin(pygame.time.get_ticks()) > 0:
+            white_mask = pygame.mask.from_surface(self.image)
+            white_surf = white_mask.to_surface()
+            white_surf.set_colorkey('black')
+            self.image = white_surf
         
     def update(self, dt):
         self.shoot_timer.update()
         self.state_manager()
+        self.timer()
+        self.flickering()
 
         # animation
         self.frame_index += ANIMATION_SPEED * dt
@@ -119,7 +143,6 @@ class Pearl(pygame.sprite.Sprite):
         if not self.timers['reverse'].active:
             self.direction *= -1
             self.timers['reverse'].activate()
-
 
     def update(self, dt):
         for timer in self.timers.values():

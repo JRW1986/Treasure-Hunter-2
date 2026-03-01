@@ -37,6 +37,7 @@ class Level:
         self.tooth_sprites = pygame.sprite.Group()
         self.pearl_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
+        self.shell_sprites = pygame.sprite.Group()
 
         self.setup(tmx_map, level_frames, audio_files)
 
@@ -176,7 +177,7 @@ class Level:
               Shell(
                   pos = (obj.x, obj.y),
                   frames = level_frames['shell'],
-                  groups = (self.all_sprites, self.collision_sprites),
+                  groups = (self.all_sprites, self.collision_sprites, self.shell_sprites),
                   reverse = obj.properties['reverse'],
                   player = self.player,
                   create_pearl = self.create_pearl
@@ -231,6 +232,10 @@ class Level:
             facing_target = self.player.rect.centerx < target.rect.centerx and self.player.facing_right or\
                             self.player.rect.centerx > target.rect.centerx and not self.player.facing_right
             if target.rect.colliderect(self.player.rect) and self.player.attacking and facing_target:
+                if target in self.tooth_sprites:
+                    target.health -= 50
+                    if target.health <= 0:
+                        target.kill()
                 target.reverse()
 
     def check_constraint(self):
@@ -242,6 +247,7 @@ class Level:
 
         # bottom constraint
         if self.player.hitbox_rect.bottom > self.level_bottom:
+            self.data.coins = 0
             self.data.health = self.data.max_health
             self.data.current_level = 0
             self.data.unlocked_level = 0
@@ -250,6 +256,14 @@ class Level:
         # success condition
         if self.player.hitbox_rect.colliderect(self.level_finish_rect):
             self.switch_stage('overworld', self.level_unlock)
+
+        # pearl hit shell
+        for pearl in self.pearl_sprites:
+            for shell in self.shell_sprites:
+                if pearl.rect.colliderect(shell.rect):
+                    shell.health -= 25
+                    if shell.health <= 0:
+                        shell.kill() 
             
     def run(self, dt):
         self.display_surface.fill('black')

@@ -18,7 +18,7 @@ class Game:
         self.ui = UI(self.font, self.ui_frames)
         self.data = Data(self.ui)
         self.tmx_maps = {
-            0: load_pygame(join('data', 'levels','0.tmx')),
+            0: load_pygame(join('data', 'levels','omni.tmx')),
             1: load_pygame(join('data', 'levels','1.tmx')),
             2: load_pygame(join('data', 'levels','2.tmx')),
             3: load_pygame(join('data', 'levels','3.tmx')),
@@ -90,6 +90,7 @@ class Game:
 
     def check_game_over(self):
         if self.data.health <= 0:
+            self.data.coins = 0
             self.data.health = self.data.max_health
             self.data.current_level = 0
             self.data.unlocked_level = 0
