@@ -1,6 +1,7 @@
 class Data:
     def __init__(self, ui):
         self._coins = 0
+        self.max_health = 5
         self._health = 5
         self.ui = ui
         self.ui.create_hearts(self._health)

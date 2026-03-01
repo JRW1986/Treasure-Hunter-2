@@ -4,7 +4,7 @@ from os.path import join
 from math import sin
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, data):
+    def __init__(self, pos, groups, collision_sprites, semi_collision_sprites, frames, data, attack_sound, jump_sound):
         # general setup
         super().__init__(groups)
         self.z = Z_LAYERS['main']
@@ -43,6 +43,10 @@ class Player(pygame.sprite.Sprite):
             'hit': Timer(400)
         }
 
+        # audio
+        self.attack_sound = attack_sound
+        self.jump_sound = jump_sound
+
     def input(self):
         keys = pygame.key.get_pressed()
         input_vector = vector(0,0)
@@ -73,6 +77,7 @@ class Player(pygame.sprite.Sprite):
             self.attacking = True
             self.frame_index = 0
             self.timers['attack cooldown'].activate()
+            self.attack_sound.play()
 
     def move(self, dt):
         # horizontal
@@ -94,10 +99,13 @@ class Player(pygame.sprite.Sprite):
                 self.direction.y = -self.jump_height
                 self.timers['wall slide block'].activate()
                 self.hitbox_rect.bottom -= 1
+                self.jump_sound.play()
             elif any((self.on_surface['left'], self.on_surface['right'])) and not self.timers['wall slide block'].active:
                 self.timers['wall jump'].activate()
                 self.direction.y = -self.jump_height
                 self.direction.x = 1 if self.on_surface['left'] else -1
+                self.hitbox_rect.bottom -= 1
+                self.jump_sound.play()
             self.jump = False
 
         self.collision('vertical')
@@ -152,7 +160,7 @@ class Player(pygame.sprite.Sprite):
     def semi_collision(self):
         if not self.timers['platform skip'].active:
             for sprite in self.semi_collision_sprites:
-                if sprite.rect.colliderect(self.rect):
+                if sprite.rect.colliderect(self.hitbox_rect):
                     if self.hitbox_rect.bottom >= sprite.rect.top and int(self.old_rect.bottom) <= sprite.old_rect.top:
                         self.hitbox_rect.bottom = sprite.rect.top
                         if self.direction.y > 0:
@@ -198,7 +206,6 @@ class Player(pygame.sprite.Sprite):
             white_surf = white_mask.to_surface()
             white_surf.set_colorkey('black')
             self.image = white_surf
-
 
     def update(self, dt):
         self.old_rect = self.hitbox_rect.copy()

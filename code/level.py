@@ -7,14 +7,16 @@ from enemies import Tooth, Shell, Pearl
 from random import uniform
 
 class Level:
-    def __init__(self, tmx_map, level_frames, data):
+    def __init__(self, tmx_map, level_frames, audio_files, data, switch_stage):
         self.display_surface = pygame.display.get_surface()
         self.data = data
+        self.switch_stage = switch_stage
 
         # level data
         self.level_width = tmx_map.width * TILE_SIZE
         self.level_bottom = tmx_map.height * TILE_SIZE
         tmx_level_properties = tmx_map.get_layer_by_name('Data')[0].properties
+        self.level_unlock = tmx_level_properties['level_unlock']
         if tmx_level_properties['bg']:
             bg_tile = level_frames['bg_tiles'][tmx_level_properties['bg']]
         else:
@@ -36,25 +38,38 @@ class Level:
         self.pearl_sprites = pygame.sprite.Group()
         self.item_sprites = pygame.sprite.Group()
 
-        self.setup(tmx_map, level_frames)
+        self.setup(tmx_map, level_frames, audio_files)
 
         # frames
         self.pearl_surf = level_frames['pearl']
         self.particle_frames = level_frames['particle']
 
-    def setup(self, tmx_map, level_frames):
+        # audio
+        self.coin_sound = audio_files['coin']
+        self.coin_sound.set_volume(0.2)
+        self.damage_sound = audio_files['damage']
+        self.damage_sound.set_volume(0.3)
+        self.pearl_sound = audio_files['pearl']
+        
+    def setup(self, tmx_map, level_frames, audio_files):
        # tiles
        for layer in ['BG', 'Terrain', 'FG', 'Platforms']:
            for x, y, surf in tmx_map.get_layer_by_name(layer).tiles():
-               groups = [self.all_sprites]
-               if layer == 'Terrain': groups.append(self.collision_sprites)
-               if layer == 'Platforms': groups.append(self.semi_collision_sprites)
+               pos = (x * TILE_SIZE, y * TILE_SIZE)
                match layer:
                    case 'BG': z = Z_LAYERS['bg tiles']
                    case 'FG': z = Z_LAYERS['bg tiles']
                    case _: z = Z_LAYERS['main']
-               
-               Sprite((x * TILE_SIZE,y * TILE_SIZE), surf, groups, z)
+
+               if layer == 'Platforms':
+                   Sprite(pos, surf, self.all_sprites, z)
+                   collider_surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+                   Sprite(pos, collider_surf, self.semi_collision_sprites)
+               else:
+                   groups = [self.all_sprites]
+                   if layer == 'Terrain':
+                       groups.append(self.collision_sprites)
+                   Sprite(pos, surf, groups, z)
 
        # bg details
        for obj in tmx_map.get_layer_by_name('BG details'):
@@ -74,7 +89,10 @@ class Level:
                     collision_sprites = self.collision_sprites, 
                     semi_collision_sprites = self.semi_collision_sprites,
                     frames = level_frames['player'],
-                    data = self.data)
+                    data = self.data,
+                    attack_sound = audio_files['attack'],
+                    jump_sound = audio_files['jump']
+                    )
            else:
                if obj.name in ('barrel', 'crate'):
                      Sprite((obj.x, obj.y), obj.image, (self.all_sprites, self.collision_sprites))
@@ -86,8 +104,8 @@ class Level:
 
                    # groups
                    groups = [self.all_sprites]
-                   if obj.name in ('palm_small', 'palm_large'): groups.append(self.semi_collision_sprites)
-                   if obj.name in ('saw', 'floor_spike'): groups.append(self.damege_sprites)
+                   if obj.name in ('saw', 'floor_spike'):
+                       groups.append(self.damege_sprites)
 
                    # z index
                    z = Z_LAYERS['main'] if not 'bg' in obj.name else Z_LAYERS['bg details']
@@ -96,6 +114,10 @@ class Level:
                    animation_speed = ANIMATION_SPEED if not 'palm' in obj.name else ANIMATION_SPEED + uniform(-1, 1)
                       
                    AnimatedSprite((obj.x, obj.y), frames, groups, z)
+
+                   if obj.name in ('palm_small', 'palm_large'):
+                       collider_surf = pygame.Surface((obj.width, obj.height), pygame.SRCALPHA)
+                       Sprite((obj.x, obj.y), collider_surf, self.semi_collision_sprites)
            if obj.name == 'flag':
                self.level_finish_rect = pygame.FRect((obj.x, obj.y,), (obj.width, obj.height))
 
@@ -179,6 +201,7 @@ class Level:
 
     def create_pearl(self, pos, direction):
         Pearl(pos, (self.all_sprites, self.damege_sprites, self.pearl_sprites), self.pearl_surf, direction, 150)
+        self.pearl_sound.play()
 
     def pearl_collisions(self):
         for sprite in self.collision_sprites:
@@ -190,6 +213,7 @@ class Level:
         for sprite in self.damege_sprites:
             if sprite.rect.colliderect(self.player.hitbox_rect):
                 self.player.get_damage()
+                self.damage_sound.play()
                 if hasattr(sprite, 'pearl'):
                     sprite.kill()
                     ParticleEffectSprite((sprite.rect.center), self.particle_frames, self.all_sprites)
@@ -200,6 +224,7 @@ class Level:
             if item_sprites:
                 item_sprites[0].activate()
                 ParticleEffectSprite((item_sprites[0].rect.center), self.particle_frames, self.all_sprites)
+                self.coin_sound.play()
 
     def attack_collisions(self):
         for target in self.pearl_sprites.sprites() + self.tooth_sprites.sprites():
@@ -217,11 +242,14 @@ class Level:
 
         # bottom constraint
         if self.player.hitbox_rect.bottom > self.level_bottom:
-            pass
+            self.data.health = self.data.max_health
+            self.data.current_level = 0
+            self.data.unlocked_level = 0
+            self.switch_stage('overworld')
 
         # success condition
         if self.player.hitbox_rect.colliderect(self.level_finish_rect):
-            print('level complete')
+            self.switch_stage('overworld', self.level_unlock)
             
     def run(self, dt):
         self.display_surface.fill('black')
