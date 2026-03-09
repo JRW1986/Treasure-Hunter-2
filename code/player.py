@@ -110,7 +110,8 @@ class Player(pygame.sprite.Sprite):
 
         self.collision('vertical')
         self.semi_collision()
-        self.rect.center = self.hitbox_rect.center
+        # Keep visual feet aligned with collision bottom, with a slight downward nudge for art padding.
+        self.rect.midbottom = (self.hitbox_rect.midbottom[0], self.hitbox_rect.midbottom[1] + 4)
 
     def platform_move(self, dt):
         if self.platform:
